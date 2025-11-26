@@ -1,5 +1,5 @@
 import { Expense, ExpenseCategory, ExpenseSummary, ExpenseFilters } from '@/types/expense';
-import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from 'date-fns';
 
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
@@ -9,12 +9,8 @@ export const formatCurrency = (amount: number): string => {
 };
 
 export const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return new Intl.DateFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
+  const date = parseISO(dateString);
+  return format(date, 'MMM d, yyyy');
 };
 
 export const filterExpenses = (expenses: Expense[], filters: ExpenseFilters): Expense[] => {
