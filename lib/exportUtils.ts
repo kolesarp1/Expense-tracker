@@ -1,0 +1,232 @@
+import { Expense } from '@/types/expense';
+import { formatDate, formatCurrency } from './utils';
+
+export type ExportFormat = 'csv' | 'json' | 'pdf';
+
+export interface ExportOptions {
+  format: ExportFormat;
+  filename: string;
+  expenses: Expense[];
+}
+
+// CSV Export
+export const exportToCSV = (expenses: Expense[], filename: string): void => {
+  const headers = ['Date', 'Category', 'Amount', 'Description'];
+  const rows = expenses.map(expense => [
+    formatDate(expense.date),
+    expense.category,
+    `$${expense.amount.toFixed(2)}`,
+    expense.description,
+  ]);
+
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
+  ].join('\n');
+
+  downloadFile(csvContent, `${filename}.csv`, 'text/csv;charset=utf-8;');
+};
+
+// JSON Export
+export const exportToJSON = (expenses: Expense[], filename: string): void => {
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    totalRecords: expenses.length,
+    totalAmount: expenses.reduce((sum, e) => sum + e.amount, 0),
+    expenses: expenses.map(expense => ({
+      date: expense.date,
+      category: expense.category,
+      amount: expense.amount,
+      description: expense.description,
+    })),
+  };
+
+  const jsonContent = JSON.stringify(exportData, null, 2);
+  downloadFile(jsonContent, `${filename}.json`, 'application/json;charset=utf-8;');
+};
+
+// PDF Export (using HTML-based approach)
+export const exportToPDF = (expenses: Expense[], filename: string): void => {
+  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Create HTML content for PDF
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Expense Report</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          padding: 40px;
+          color: #333;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+          border-bottom: 3px solid #3b82f6;
+          padding-bottom: 20px;
+        }
+        .header h1 {
+          margin: 0;
+          color: #1f2937;
+          font-size: 28px;
+        }
+        .header p {
+          margin: 5px 0;
+          color: #6b7280;
+        }
+        .summary {
+          background: #f3f4f6;
+          padding: 20px;
+          border-radius: 8px;
+          margin-bottom: 30px;
+        }
+        .summary-row {
+          display: flex;
+          justify-content: space-between;
+          margin: 10px 0;
+          font-size: 16px;
+        }
+        .summary-row strong {
+          color: #1f2937;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th {
+          background-color: #3b82f6;
+          color: white;
+          padding: 12px;
+          text-align: left;
+          font-weight: 600;
+        }
+        td {
+          padding: 12px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        tr:nth-child(even) {
+          background-color: #f9fafb;
+        }
+        tr:hover {
+          background-color: #f3f4f6;
+        }
+        .amount {
+          text-align: right;
+          font-weight: 600;
+        }
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          color: #9ca3af;
+          font-size: 12px;
+        }
+        .category-badge {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Expense Report</h1>
+        <p>Generated on ${new Date().toLocaleString()}</p>
+      </div>
+
+      <div class="summary">
+        <div class="summary-row">
+          <span>Total Records:</span>
+          <strong>${expenses.length}</strong>
+        </div>
+        <div class="summary-row">
+          <span>Total Amount:</span>
+          <strong>${formatCurrency(totalAmount)}</strong>
+        </div>
+        <div class="summary-row">
+          <span>Date Range:</span>
+          <strong>${expenses.length > 0 ? `${formatDate(expenses[0].date)} - ${formatDate(expenses[expenses.length - 1].date)}` : 'N/A'}</strong>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th style="text-align: right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${expenses.map(expense => `
+            <tr>
+              <td>${formatDate(expense.date)}</td>
+              <td><span class="category-badge">${expense.category}</span></td>
+              <td>${expense.description}</td>
+              <td class="amount">${formatCurrency(expense.amount)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <p>This report was generated by Expense Tracker</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Create a blob and download as HTML (user can print to PDF)
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+
+  // Open in new window for printing
+  const printWindow = window.open(url, '_blank');
+  if (printWindow) {
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  }
+
+  // Also offer direct download of the HTML file
+  downloadFile(htmlContent, `${filename}.html`, 'text/html;charset=utf-8;');
+};
+
+// Helper function to download files
+const downloadFile = (content: string, filename: string, mimeType: string): void => {
+  const blob = new Blob([content], { type: mimeType });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // Clean up
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+};
+
+// Main export function
+export const performExport = ({ format, filename, expenses }: ExportOptions): void => {
+  switch (format) {
+    case 'csv':
+      exportToCSV(expenses, filename);
+      break;
+    case 'json':
+      exportToJSON(expenses, filename);
+      break;
+    case 'pdf':
+      exportToPDF(expenses, filename);
+      break;
+  }
+};

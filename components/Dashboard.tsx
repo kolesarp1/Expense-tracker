@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { Expense, ExpenseCategory } from '@/types/expense';
-import { formatCurrency, calculateSummary, getCategoryColor, getCategoryIcon, exportToCSV, formatDate } from '@/lib/utils';
+import { formatCurrency, calculateSummary, getCategoryColor, getCategoryIcon, formatDate } from '@/lib/utils';
 import SpendingChart from './SpendingChart';
 import CategoryChart from './CategoryChart';
+import ExportModal from './ExportModal';
 
 interface DashboardProps {
   expenses: Expense[];
@@ -15,16 +16,13 @@ interface DashboardProps {
 
 export default function Dashboard({ expenses, onEditExpense }: DashboardProps) {
   const summary = useMemo(() => calculateSummary(expenses), [expenses]);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const recentExpenses = useMemo(() => {
     return [...expenses]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
   }, [expenses]);
-
-  const handleExportAll = () => {
-    exportToCSV(expenses);
-  };
 
   return (
     <div className="space-y-6">
@@ -178,14 +176,34 @@ export default function Dashboard({ expenses, onEditExpense }: DashboardProps) {
         )}
       </Card>
 
-      {/* Export Button */}
+      {/* Export Section */}
       {expenses.length > 0 && (
-        <div className="flex justify-end">
-          <Button onClick={handleExportAll} variant="primary">
-            Export All Expenses
-          </Button>
-        </div>
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Export Your Data</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Download your expenses in multiple formats with advanced filtering options
+              </p>
+            </div>
+            <Button onClick={() => setIsExportModalOpen(true)} variant="primary">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Advanced Export
+              </div>
+            </Button>
+          </div>
+        </Card>
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        expenses={expenses}
+      />
     </div>
   );
 }
