@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import ExpenseForm from '@/components/ExpenseForm';
 import ExpenseList from '@/components/ExpenseList';
 import Dashboard from '@/components/Dashboard';
+import MonthlyInsights from '@/components/MonthlyInsights';
 import { Expense } from '@/types/expense';
 import { getExpenses, saveExpense, deleteExpense as removeExpense, updateExpense } from '@/lib/storage';
 
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'insights'>('dashboard');
 
   useEffect(() => {
     const loadedExpenses = getExpenses();
@@ -77,6 +78,16 @@ export default function Home() {
               Dashboard
             </button>
             <button
+              onClick={() => setActiveTab('insights')}
+              className={`${
+                activeTab === 'insights'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+            >
+              Monthly Insights
+            </button>
+            <button
               onClick={() => setActiveTab('expenses')}
               className={`${
                 activeTab === 'expenses'
@@ -94,6 +105,8 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'dashboard' ? (
           <Dashboard expenses={expenses} onEditExpense={handleEditExpense} />
+        ) : activeTab === 'insights' ? (
+          <MonthlyInsights expenses={expenses} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
